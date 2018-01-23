@@ -8,7 +8,9 @@ module.exports = function (grunt) {
   var sharp = require('sharp');
 
   grunt.registerMultiTask('sharp', 'Resize images.', function () {
-    modifyImages(getImages(this.files), this.options(), this.async());
+    enrichImages(getImages(this.files), function(images){
+      modifyImages(images, this.options(), this.async());
+    });
   });
 
   var getImages = function (files) {
@@ -57,6 +59,17 @@ module.exports = function (grunt) {
     });
   };
 
+
+  var enrichImages = function(images, done){
+    async.map(images, function(image, cb){
+      sharp(image.src).metadata().then(function(info){
+        image.width = info.width;
+        image.height = info.height;
+        cb();
+      });
+    }, done);
+  };
+
   var modifyImage = function (image, options, done) {
     var tasks = _.map(options.tasks || [options], function (task) {
       return function (callback) {
@@ -64,6 +77,9 @@ module.exports = function (grunt) {
         _.map(task, function (args, op) {
           if (data[op]) {
             data[op].apply(data, [].concat(args));
+          }
+          if(op === 'scale'){
+            grunt.log.warn(image);
           }
           else if (op !== 'rename') {
             grunt.log.warn('Skipping unknown operation: ' + op);
