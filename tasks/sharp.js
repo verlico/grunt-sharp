@@ -50,7 +50,6 @@ module.exports = function (grunt) {
   };
 
   var modifyImages = function (images, options, done) {
-    grunt.log.ok(images[0].width);
     var tasks = _.map(images, function (image) {
       return function (callback) {
         modifyImage(image, options, callback);
