@@ -76,9 +76,8 @@ module.exports = function (grunt) {
       return function (callback) {
         var data = sharp(image.src);
         _.map(task, function (args, op) {
-
           if(op === 'scale'){
-            data.resize(image.width / 2, image.height / 2);
+            data.resize(image.width * args, image.height * args);
           }
           else if (data[op]) {
             data[op].apply(data, [].concat(args));
