@@ -8,78 +8,80 @@ module.exports = function (grunt) {
   var sharp = require('sharp');
 
   grunt.registerMultiTask('sharp', 'Resize images.', function () {
+    var options = this.options();
+    var done = this.async();
     enrichImages(getImages(this.files), function(images){
-      modifyImages(images, this.options(), this.async());
+      modifyImages(images, options, done);
     });
   });
+
+  var enrichImages = function(images, cb){
+    async.map(images, function(image, cb){
+      sharp(image.src).metadata().then(function(info){
+        image.width = info.width;
+        image.height = info.height;
+        cb(null, image);
+      },function(){
+        image.noSize = true;
+        cb(null, image);
+      });
+    }, function(err, res){
+      cb(res);
+    });
+  };
 
   var getImages = function (files) {
     return _.reduce(files, function (memo, filePair) {
       var isExpandedPair = !!filePair.orig.expand;
       var isExtDotLast = (filePair.orig.extDot === 'last');
       var isDirectory = (detectDestType(filePair.dest) === 'directory');
-
       var extDot = {
         first: /.*?(\.[^\/]*)$/,
         last: /.*?(\.[^\/\.]*)$/
       };
-
       var images = _.map(filePair.src, function (src) {
         var ext = src.replace(isExtDotLast ? extDot.last : extDot.first, '$1');
         var dest = (!isExpandedPair && isDirectory) ?
           unixifyPath(path.join(filePair.dest, src)) : filePair.dest;
-
         return {src: src, ext: ext, dest: dest};
       });
-
       return memo.concat(images);
     }, []);
   };
 
   var modifyImages = function (images, options, done) {
+    grunt.log.ok(images[0].width);
     var tasks = _.map(images, function (image) {
       return function (callback) {
         modifyImage(image, options, callback);
       };
     });
-
     async.parallel(tasks, function (err, results) {
       if (err) {
         return done(new Error(err));
       }
-
       var total = results.reduce(function (memo, result) {
         return memo + result.length;
       }, 0);
-
       grunt.log.ok('Generated ' +
         chalk.cyan(total.toString()) + (total === 1 ? ' image' : ' images'));
-
       done();
     });
   };
 
 
-  var enrichImages = function(images, done){
-    async.map(images, function(image, cb){
-      sharp(image.src).metadata().then(function(info){
-        image.width = info.width;
-        image.height = info.height;
-        cb();
-      });
-    }, done);
-  };
 
   var modifyImage = function (image, options, done) {
     var tasks = _.map(options.tasks || [options], function (task) {
       return function (callback) {
         var data = sharp(image.src);
         _.map(task, function (args, op) {
-          if (data[op]) {
-            data[op].apply(data, [].concat(args));
-          }
+
           if(op === 'scale'){
-            grunt.log.warn(image);
+            data.resize(image.width / 2, image.height / 2);
+          }
+          else if (data[op]) {
+            data[op].apply(data, [].concat(args));
           }
           else if (op !== 'rename') {
             grunt.log.warn('Skipping unknown operation: ' + op);

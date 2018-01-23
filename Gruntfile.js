@@ -43,9 +43,9 @@ module.exports = function (grunt) {
         files: files,
         options: {
           tasks: [
-            {resize: 32, rename: '{base}-32x32.{ext}'},
-            {resize: 32, rename: '{base}-16x16@2x.{ext}'},
-            {resize: 16, rename: '{base}-16x16.{ext}'}
+            {scale: undefined, rename: '{base}-32x32.{ext}'},
+            {scale: undefined, rename: '{base}-16x16@2x.{ext}'},
+            {scale: undefined, rename: '{base}-16x16.{ext}'}
           ]
         }
       }
@@ -66,7 +66,7 @@ module.exports = function (grunt) {
 
   // Whenever the "test" task is run, first clean the "tmp" dir, then run this
   // plugin's task(s), then test the result.
-  grunt.registerTask('test', ['clean', 'jshint', 'sharp', 'nodeunit']);
+  grunt.registerTask('test', ['clean', 'sharp', 'nodeunit']);
 
   // By default, lint and run all tests.
   grunt.registerTask('default', ['test']);
